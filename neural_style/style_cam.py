@@ -1,5 +1,5 @@
 import argparse
-from time import time
+import time
 import cv2
 import torch
 from torchvision import transforms
@@ -7,12 +7,15 @@ import utils
 import re
 from transformer_net import TransformerNet
 import pathlib
+from imutils.video import VideoStream
+from imutils import resize
+import numpy as np
 
 device=torch.device('cpu')
 parser=argparse.ArgumentParser()
 parser.add_argument('--model', required=True, help='Path to style model.')
-parser.add_argument('--image', required=True, help='Path to image.')
-parser.add_argument('--output', default=None, help='Path to where the output should be saved.')
+# parser.add_argument('--image', required=True, help='Path to image.')
+# parser.add_argument('--output', default=None, help='Path to where the output should be saved.')
 parser.add_argument('--scale', default=1, type=float,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
 def style_frame(img,style_model):
@@ -28,12 +31,40 @@ def style_frame(img,style_model):
         
     return output[0]
         
+def style_cam(style_model,width=300):
+    print("[INFO] starting video stream...")
+    vs = VideoStream(src=0).start()
+    time.sleep(2.0)
+    while(True):
+        frame=vs.read()
+        if frame is None:
+            frame=np.random.randint(0,255,(480,640,3),dtype=np.uint8)
+        frame=cv2.flip(frame, 1)
+        frame = resize(frame, width=width)
+        # orig = frame.copy()
+        # (h, w) = frame.shape[:2]
+
+        # Style the frame
+        img=style_frame(frame,style_model).numpy()
+        img=np.clip(img,0,255)
+        img=img.astype(np.uint8)
+        
+        img = img.transpose(1, 2, 0)
+        img=cv2.resize(img[:,:,::-1],(640,480))
+
+        # print(img.shape)
+        cv2.imshow("Output", img)
+        key = cv2.waitKey(1) & 0xFF
+
+        if key == ord("q"):
+            break
+
 
 if __name__=='__main__':
     # Parse input arguments
     args=parser.parse_args()
     # load image
-    image = utils.load_image(args.image, scale=args.scale)
+    # image = utils.load_image(args.image, scale=args.scale)
 
     # load model
     model = TransformerNet()
@@ -44,10 +75,13 @@ if __name__=='__main__':
     model.load_state_dict(state_dict)
     model.to(device)
 
-    # style the image
-    output=style_frame(image,model)
-    if output is None:
-        output= pathlib.Path(args.image).parent.joinpath(f'output{int(time.time()*100)}.jpg')
-    # save the output
-    output_path=args.output
-    utils.save_image(output_path, output)
+    # # style the image
+    # output=style_frame(image,model)
+    # if output is None:
+    #     output= pathlib.Path(args.image).parent.joinpath(f'output{int(time.time()*100)}.jpg')
+    # # save the output
+    # output_path=args.output
+    # utils.save_image(output_path, output)
+
+    # style_cam
+    style_cam(model)
