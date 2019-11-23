@@ -15,10 +15,8 @@ import itertools
 
 device=torch.device('cpu')
 parser=argparse.ArgumentParser()
-# parser.add_argument('--model', required=True, help='Path to style model.')
+
 parser.add_argument('--model', default='./models', help='Path to style model.')
-# parser.add_argument('--image', required=True, help='Path to image.')
-# parser.add_argument('--output', default=None, help='Path to where the output should be saved.')
 parser.add_argument('--width', default=320, type=float,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
 
@@ -40,7 +38,7 @@ class Timer():
         return 1/self.time()
     
 
-def style_frame(img,style_model):
+def style_frame(img,style_model,device=device):
     
     content_transform = transforms.Compose([
         transforms.ToTensor(),
@@ -66,8 +64,6 @@ def style_cam(style_model,width=320):
             frame=np.random.randint(0,255,(480,640,3),dtype=np.uint8)
         frame=cv2.flip(frame, 1)
         frame = resize(frame, width=width)
-        # orig = frame.copy()
-        # (h, w) = frame.shape[:2]
 
         # Style the frame
         img=style_frame(frame,style_model).numpy()
@@ -84,7 +80,7 @@ def style_cam(style_model,width=320):
         if key == ord("q"):
             break
 
-def multi_style(path,width=320):
+def multi_style(path,width=320,device=device):
     model_iter=itertools.cycle(os.listdir(path))
     model_file=next(model_iter)
     print(f'Using {model_file} ')
@@ -139,6 +135,7 @@ if __name__=='__main__':
     # Parse input arguments
     args=parser.parse_args()
     path= pathlib.Path(args.model)
+    width=np.int(args.width)
     if path.is_file():
         # load model
         model = TransformerNet()
@@ -149,9 +146,9 @@ if __name__=='__main__':
         state_dict=read_state_dict(args.model)
         model.load_state_dict(state_dict)
         model.to(device)
-        style_cam(model,args.width)
+        style_cam(model,width)
     else:
-        multi_style(path,args.width)
+        multi_style(path,width)
 
     # # style the image
     # output=style_frame(image,model)

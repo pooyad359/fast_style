@@ -33,6 +33,7 @@ if __name__=='__main__':
         image = np.random.randint(0,255,(width,width,3),dtype=np.uint8)
     else:
         image = cv2.imread(args.image)
+        image = image[:width,:width,:]
     n_try= args.trials
     model_path = args.model
     state_dict=read_state_dict(model_path)
@@ -41,7 +42,7 @@ if __name__=='__main__':
     model.to(device)
     start=time.time()
     for i in range(n_try):
-        output=style_frame(image,model)
+        output=style_frame(image,model,device=device)
         output=output.numpy().astype(np.uint8)
         output = output.transpose(1, 2, 0)
     end=time.time()
@@ -50,4 +51,6 @@ if __name__=='__main__':
     # key = cv2.waitKey(1) & 0xFF
     # print(output.numpy().astype(np.uint8))
     # print(image)
-    print(f'average time = {(end-start)/n_try:.3},\t {n_try/(end-start)} FPS')
+    print(f'Size: {width} x {width}')
+    print(f'Trials: {n_try}')
+    print(f'average time = {(end-start)/n_try:.3},\t {n_try/(end-start):.3} FPS')
