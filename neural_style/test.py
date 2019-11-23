@@ -16,7 +16,7 @@ from style_cam import read_state_dict, style_frame
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--model', default='./models/udnie.pth', help='Path to style model.')
-parser.add_argument('--width', default=320, type=float,
+parser.add_argument('--width', default=320, type=int,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
 parser.add_argument('--image',default=None,help = 'Path to an image for testing. If empty random noise will be used.')
 parser.add_argument('--trials',default=32,type=int,help='Number of times the image will be passed through the network.')
