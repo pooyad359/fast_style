@@ -33,7 +33,7 @@ if __name__=='__main__':
         image = np.random.randint(0,255,(width,width,3),dtype=np.uint8)
     else:
         image = cv2.imread(args.image)
-        image = image[:width,:width,:]
+        image = cv2.resize(image,(width,width))
     n_try= args.trials
     model_path = args.model
     state_dict=read_state_dict(model_path)
