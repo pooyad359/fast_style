@@ -19,6 +19,8 @@ parser=argparse.ArgumentParser()
 parser.add_argument('--model', default='./models', help='Path to style model.')
 parser.add_argument('--width', default=320, type=float,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
+parser.add_argument('--gpu',default=0,type=int,
+                    help='If it is non-zero gpu will be used for inference.')
 
 class Timer():
     def __init__(self):
@@ -66,7 +68,7 @@ def style_cam(style_model,width=320):
         frame = resize(frame, width=width)
 
         # Style the frame
-        img=style_frame(frame,style_model).numpy()
+        img=style_frame(frame,style_model,device).numpy()
         img=np.clip(img,0,255)
         img=img.astype(np.uint8)
         
@@ -134,6 +136,10 @@ def read_state_dict(path):
 if __name__=='__main__':
     # Parse input arguments
     args=parser.parse_args()
+    gpu=args.gpu
+    if gpu!=0 and torch.cuda.is_available():
+        device=torch.device('cuda')
+    print('Using {}'.format(device))
     path= pathlib.Path(args.model)
     width=np.int(args.width)
     if path.is_file():
@@ -148,15 +154,7 @@ if __name__=='__main__':
         model.to(device)
         style_cam(model,width)
     else:
-        multi_style(path,width)
+        multi_style( path = path,
+                    width = width,
+                    device = device)
 
-    # # style the image
-    # output=style_frame(image,model)
-    # if output is None:
-    #     output= pathlib.Path(args.image).parent.joinpath(f'output{int(time.time()*100)}.jpg')
-    # # save the output
-    # output_path=args.output
-    # utils.save_image(output_path, output)
-
-    # style_cam
-    # style_cam(model)
