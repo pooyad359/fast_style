@@ -102,7 +102,7 @@ def multi_style(path,width=320,device=device):
         frame = resize(frame, width=width)
 
         # Style the frame
-        img=style_frame(frame,model).numpy()
+        img=style_frame(frame,model,device).numpy()
         img=np.clip(img,0,255)
         img=img.astype(np.uint8)
         
