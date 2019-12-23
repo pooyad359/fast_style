@@ -23,6 +23,8 @@ parser.add_argument('--gpu',default=0,type=int,
                     help='If it is non-zero gpu will be used for inference.')
 parser.add_argument('--time',default=None,type=float,
                     help='To activate automatic looping through the model set how long each model should be active.')
+parser.add_argument('--full-screen', default = 0, type = int,
+                    help = 'Display the output in full screen mode.')
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -148,6 +150,9 @@ if __name__=='__main__':
     print('Using {}'.format(device))
     path= pathlib.Path(args.model)
     width=np.int(args.width)
+    if args.full_screen:
+        cv2.namedWindow("Output", cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty("Output",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
     if path.is_file():
         # load model
         model = TransformerNet()
