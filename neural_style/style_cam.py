@@ -21,7 +21,8 @@ parser.add_argument('--width', default=320, type=float,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
 parser.add_argument('--gpu',default=0,type=int,
                     help='If it is non-zero gpu will be used for inference.')
-
+parser.add_argument('--time',default=None,type=float,
+                    help='To activate automatic looping through the model set how long each model should be active.')
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -82,7 +83,7 @@ def style_cam(style_model,width=320):
         if key == ord("q"):
             break
 
-def multi_style(path,width=320,device=device):
+def multi_style(path,width=320,device=device,cycle_length = np.inf):
     model_iter=itertools.cycle(os.listdir(path))
     model_file=next(model_iter)
     print(f'Using {model_file} ')
@@ -94,6 +95,7 @@ def multi_style(path,width=320,device=device):
     vs = VideoStream(src=0).start()
     time.sleep(2.0)
     timer=Timer()
+    cycle_begin = time.time()
     while(True):
         frame=vs.read()
         if frame is None:
@@ -113,12 +115,13 @@ def multi_style(path,width=320,device=device):
         cv2.imshow("Output", img)
         timer()
         key = cv2.waitKey(1) & 0xFF
-        if key == ord("n"):
+        if key == ord("n") or (time.time()-cycle_begin)>cycle_length:
             model_file=next(model_iter)
             print(f'Using {model_file} ')
             model_path=os.path.join(path,model_file)
             model.load_state_dict(read_state_dict(model_path))
             model.to(device)
+            cycle_begin=time.time()
         elif key == ord("q"):
             break
 
@@ -137,6 +140,9 @@ if __name__=='__main__':
     # Parse input arguments
     args=parser.parse_args()
     gpu=args.gpu
+    cycle = args.time
+    if cycle is None:
+        cycle = np.inf
     if gpu!=0 and torch.cuda.is_available():
         device=torch.device('cuda')
     print('Using {}'.format(device))
@@ -156,5 +162,6 @@ if __name__=='__main__':
     else:
         multi_style( path = path,
                     width = width,
-                    device = device)
+                    device = device,
+                    cycle_length=cycle)
 
