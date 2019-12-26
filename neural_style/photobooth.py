@@ -13,7 +13,7 @@ import pdb
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--model','-m', default='./models', help='Path to style model.')
-parser.add_argument('--width','-w', default=1080, type=float,
+parser.add_argument('--width','-w', default=1080, type=int,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
 parser.add_argument('--gpu','-g',default=0,type=int,
                     help='If it is non-zero gpu will be used for inference.')
@@ -99,7 +99,7 @@ def post_process(image):
     img=np.clip(image,0,255)
     img=img.astype(np.uint8)
     img = img.transpose(1, 2, 0)
-    return img
+    return img[:,:,::-1]
     
 
 if __name__=='__main__':
