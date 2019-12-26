@@ -25,6 +25,8 @@ parser.add_argument('--time',default=None,type=float,
                     help='To activate automatic looping through the model set how long each model should be active.')
 parser.add_argument('--full-screen', default = 0, type = int,
                     help = 'Display the output in full screen mode.')
+parser.add_argument('--half',default=0,type=int,
+                    help = 'If "0" uses float32, if "1" uses float16.')
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -43,7 +45,7 @@ class Timer():
         return 1/self.time()
     
 
-def style_frame(img,style_model,device=device):
+def style_frame(img,style_model,device=device,half_precision=False):
     
     content_transform = transforms.Compose([
         transforms.ToTensor(),
@@ -51,6 +53,8 @@ def style_frame(img,style_model,device=device):
     ])
     content_image = content_transform(img)
     content_image = content_image.unsqueeze(0).to(device)
+    if half_precision:
+        content_image.half()
     with torch.no_grad():
         output = style_model(content_image).cpu()
         
@@ -58,7 +62,7 @@ def style_frame(img,style_model,device=device):
 
 
 
-def style_cam(style_model,width=320):
+def style_cam(style_model,width=320,half_precision=False):
     print("[INFO] starting video stream...")
     vs = VideoStream(src=0).start()
     time.sleep(2.0)
@@ -71,7 +75,7 @@ def style_cam(style_model,width=320):
         frame = resize(frame, width=width)
 
         # Style the frame
-        img=style_frame(frame,style_model,device).numpy()
+        img=style_frame(frame,style_model,device,half_precision).numpy()
         img=np.clip(img,0,255)
         img=img.astype(np.uint8)
         
@@ -85,7 +89,7 @@ def style_cam(style_model,width=320):
         if key == ord("q"):
             break
 
-def multi_style(path,width=320,device=device,cycle_length = np.inf):
+def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False):
     model_iter=itertools.cycle(os.listdir(path))
     model_file=next(model_iter)
     print(f'Using {model_file} ')
@@ -93,7 +97,8 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf):
     model = TransformerNet()
     model.load_state_dict(read_state_dict(model_path))
     model.to(device)
-    
+    if half_precision:
+        model.half()
     vs = VideoStream(src=0).start()
     time.sleep(2.0)
     timer=Timer()
@@ -106,7 +111,7 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf):
         frame = resize(frame, width=width)
 
         # Style the frame
-        img=style_frame(frame,model,device).numpy()
+        img=style_frame(frame,model,device,half_precision).numpy()
         img=np.clip(img,0,255)
         img=img.astype(np.uint8)
         
@@ -142,11 +147,13 @@ if __name__=='__main__':
     # Parse input arguments
     args=parser.parse_args()
     gpu=args.gpu
+    half_precision = (args.half==1)
     cycle = args.time
     if cycle is None:
         cycle = np.inf
     if gpu!=0 and torch.cuda.is_available():
         device=torch.device('cuda')
+    assert half_precision is False or device==torch.device('cuda'), "Half precision is not supported on CPU."
     print('Using {}'.format(device))
     path= pathlib.Path(args.model)
     width=np.int(args.width)
@@ -163,10 +170,13 @@ if __name__=='__main__':
         state_dict=read_state_dict(args.model)
         model.load_state_dict(state_dict)
         model.to(device)
-        style_cam(model,width)
+        style_cam(style_model = model,
+                    width = width,
+                    half_precision = half_precision)
     else:
         multi_style( path = path,
                     width = width,
                     device = device,
-                    cycle_length=cycle)
+                    cycle_length = cycle,
+                    half_precision = half_precision)
 
