@@ -54,7 +54,7 @@ def style_frame(img,style_model,device=device,half_precision=False):
     content_image = content_transform(img)
     content_image = content_image.unsqueeze(0).to(device)
     if half_precision:
-        content_image.half()
+        content_image = content_image.half()
     with torch.no_grad():
         output = style_model(content_image).cpu()
         

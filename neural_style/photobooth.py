@@ -44,6 +44,7 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         model_path = os.path.join(path,model_name)
         state_dict = read_state_dict(model_path)
         model.load_state_dict(state_dict)
+        model.to(device)
 
         # Inference
         cv2.imshow('Output',img)
