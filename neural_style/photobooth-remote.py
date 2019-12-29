@@ -27,7 +27,7 @@ parser.add_argument('--raspi','-pi',default = 0, type = int,
 def photo_booth(url, path, models, width = 1080,prep_time = 10, view_time = 10,rotate = 0,raspi=False):
     
     if raspi:
-        vs = PiVideoStream(src=0).start()
+        vs = PiVideoStream(resolution=(1080,720)).start()
     else:
         vs = VideoStream(src=0).start()
     print('Warming up')
@@ -77,7 +77,7 @@ def photo_booth(url, path, models, width = 1080,prep_time = 10, view_time = 10,r
         if key == ord("q"):
             break
         
-        view_result(img, view_time)
+        view_result(output, view_time)
                 
 
 def preparation(streamer, length = 10, rotate = 0):
@@ -114,9 +114,9 @@ def countdown_style(img,x):
     return output
 
 def view_result(image, length = 10):
-    cv2.imshow('Output',cv2.flip(image, 1))
-    time.sleep(length)
+    cv2.imshow('Output',image)
     key = cv2.waitKey(1) & 0xFF
+    time.sleep(length)
     if key == ord("q"):
         quit()
 
