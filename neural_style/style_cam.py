@@ -27,6 +27,8 @@ parser.add_argument('--full-screen', default = 0, type = int,
                     help = 'Display the output in full screen mode.')
 parser.add_argument('--half',default=0,type=int,
                     help = 'If "0" uses float32, if "1" uses float16.')
+parser.add_argument('--rotate',default = 0, type = int, 
+                    help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -62,7 +64,7 @@ def style_frame(img,style_model,device=device,half_precision=False):
 
 
 
-def style_cam(style_model,width=320,half_precision=False):
+def style_cam(style_model,width=320,half_precision=False, rotate = 0):
     print("[INFO] starting video stream...")
     vs = VideoStream(src=0).start()
     time.sleep(2.0)
@@ -81,7 +83,12 @@ def style_cam(style_model,width=320,half_precision=False):
         
         img = img.transpose(1, 2, 0)
         img=cv2.resize(img[:,:,::-1],(640,480))
-
+        # rotate
+        if rotate>0:
+            img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
+        elif rotate<0:
+            img = cv2.rotate(img,cv2.ROTATE_90_COUNTERCLOCKWISE)
+            
         # print(img.shape)
         cv2.imshow("Output", img)
         timer()
@@ -89,7 +96,7 @@ def style_cam(style_model,width=320,half_precision=False):
         if key == ord("q"):
             break
 
-def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False):
+def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False, rotate = 0):
     model_iter=itertools.cycle(os.listdir(path))
     model_file=next(model_iter)
     print(f'Using {model_file} ')
@@ -118,6 +125,11 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         img = img.transpose(1, 2, 0)
         img=cv2.resize(img[:,:,::-1],(640,480))
 
+        # rotate
+        if rotate>0:
+            img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
+        elif rotate<0:
+            img = cv2.rotate(img,cv2.ROTATE_90_COUNTERCLOCKWISE)
         # print(img.shape)
         cv2.imshow("Output", img)
         timer()
@@ -149,6 +161,7 @@ if __name__=='__main__':
     gpu=args.gpu
     half_precision = (args.half==1)
     cycle = args.time
+    rotate = args.rotate
     if cycle is None:
         cycle = np.inf
     if gpu!=0 and torch.cuda.is_available():
@@ -172,11 +185,13 @@ if __name__=='__main__':
         model.to(device)
         style_cam(style_model = model,
                     width = width,
-                    half_precision = half_precision)
+                    half_precision = half_precision,
+                    rotate = rotate)
     else:
         multi_style( path = path,
                     width = width,
                     device = device,
                     cycle_length = cycle,
-                    half_precision = half_precision)
+                    half_precision = half_precision,
+                    rotate = rotate)
 

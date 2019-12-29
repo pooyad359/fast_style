@@ -23,8 +23,9 @@ parser.add_argument('--prep-time','-pt', default = 10, type = float,
                     help = 'Time (in seconds) before taking a photo (count-down time).')
 parser.add_argument('--view-time','-vt', default = 10, type = float,
                     help = 'Time (in seconds) the result will be viewed.')
-
-def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10):
+parser.add_argument('--rotate',default = 0, type = int, 
+                    help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
+def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0):
     vs = VideoStream(src=0).start()
     print('Warming up')
     time.sleep(2.0)
@@ -33,11 +34,17 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
     cv2.namedWindow("Output", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Output",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
     while True:
-        preparation(vs,prep_time)
+        preparation(vs,prep_time,rotate)
         img = vs.read()
         img = cv2.flip(img, 1)
         img = resize(img,width)
 
+        # rotate
+        if rotate>0:
+            img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
+        elif rotate<0:
+            img = cv2.rotate(img,cv2.ROTATE_90_COUNTERCLOCKWISE)
+        
         # Choosing and loading the model
         model_name = np.random.choice(models)
         print('Using {}'.format(model_name))
@@ -61,13 +68,18 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         view_result(img, view_time)
                 
 
-def preparation(streamer, length = 10):
+def preparation(streamer, length = 10, rotate = 0):
     start = time.time()
     while (time.time()-start)<length:
         x = (time.time()-start)/length
         frame = streamer.read()
         frame = cv2.flip(frame, 1)
         frame_show = countdown_style(frame,x)
+        # rotate
+        if rotate>0:
+            frame_show = cv2.rotate(frame_show,cv2.ROTATE_90_CLOCKWISE)
+        elif rotate<0:
+            frame_show = cv2.rotate(frame_show,cv2.ROTATE_90_COUNTERCLOCKWISE)
         cv2.imshow('Output', frame_show)
         key = cv2.waitKey(1) & 0xFF
             # time.sleep(.1)
@@ -109,6 +121,7 @@ if __name__=='__main__':
     width = args.width
     prep_time = args.prep_time
     view_time = args.view_time
+    rotate = args.rotate
     if args.gpu and torch.cuda.is_available():
         device = torch.device('cuda')
     else:
@@ -118,4 +131,4 @@ if __name__=='__main__':
     else:
         models = [os.path.basename(models_path)]
         models_path = os.path.dirname(models_path)
-    photo_booth(models_path, models, width, device,prep_time,view_time)
+    photo_booth(models_path, models, width, device,prep_time,view_time,rotate)
