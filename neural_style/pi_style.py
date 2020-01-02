@@ -58,7 +58,7 @@ def style_frame(img,style_model,device=device):
 
 def style_cam(style_model,width=320):
     print("[INFO] starting video stream...")
-    vs = VideoStream(src=0).start()
+    vs = PiVideoStream().start()
     time.sleep(2.0)
     timer=Timer()
     while(True):
@@ -92,7 +92,7 @@ def multi_style(path,width=320,device=device):
     model.load_state_dict(read_state_dict(model_path))
     model.to(device)
     
-    vs = PiVideoStream(src=0).start()
+    vs = PiVideoStream().start()
     time.sleep(2.0)
     timer=Timer()
     while(True):
