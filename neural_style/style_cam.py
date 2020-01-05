@@ -16,19 +16,24 @@ import itertools
 device=torch.device('cpu')
 parser=argparse.ArgumentParser()
 
-parser.add_argument('--model', default='./models', help='Path to style model.')
-parser.add_argument('--width', default=320, type=float,
+parser.add_argument('--model', '-m', default='./models', help='Path to style model.')
+parser.add_argument('--width', '-w', default=320, type=float,
                     help='For scaling the image. Default is 1 which keeps the image unchanged.')
-parser.add_argument('--gpu',default=0,type=int,
+parser.add_argument('--gpu', '-g',default=0,type=int,
                     help='If it is non-zero gpu will be used for inference.')
-parser.add_argument('--time',default=None,type=float,
+parser.add_argument('--time', '-t',default=None,type=float,
                     help='To activate automatic looping through the model set how long each model should be active.')
-parser.add_argument('--full-screen', default = 0, type = int,
+parser.add_argument('--full-screen','-fs', default = 0, type = int,
                     help = 'Display the output in full screen mode.')
-parser.add_argument('--half',default=0,type=int,
-                    help = 'If "0" uses float32, if "1" uses float16.')
-parser.add_argument('--rotate',default = 0, type = int, 
+parser.add_argument('--half', '-hp', default=0,type=int,
+                    help = 'Half precision. If "0" uses float32, if "1" uses float16.')
+parser.add_argument('--rotate', '-r' , default = 0, type = int, 
                     help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
+parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of camera.')
+parser.add_argument('--xwin', '-x', default= 0, type = int, 
+                    help = 'x coordinate for location of window (pixels from left)')
+parser.add_argument('--ywin', '-y' ,default= 0, type = int, 
+                    help = 'y coordinate for location of window (pixels from top)')
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -96,7 +101,7 @@ def style_cam(style_model,width=320,half_precision=False, rotate = 0):
         if key == ord("q"):
             break
 
-def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False, rotate = 0):
+def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False, rotate = 0, camera = 0):
     model_iter=itertools.cycle(os.listdir(path))
     model_file=next(model_iter)
     print(f'Using {model_file} ')
@@ -106,7 +111,7 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
     model.to(device)
     if half_precision:
         model.half()
-    vs = VideoStream(src=0).start()
+    vs = VideoStream(src=camera).start()
     time.sleep(2.0)
     timer=Timer()
     cycle_begin = time.time()
@@ -170,16 +175,13 @@ if __name__=='__main__':
     print('Using {}'.format(device))
     path= pathlib.Path(args.model)
     width=np.int(args.width)
+    cv2.namedWindow("Output", cv2.WND_PROP_FULLSCREEN)
+    cv2.moveWindow('Output',x=args.xwin,y=args.ywin)
     if args.full_screen:
-        cv2.namedWindow("Output", cv2.WND_PROP_FULLSCREEN)
         cv2.setWindowProperty("Output",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
     if path.is_file():
         # load model
         model = TransformerNet()
-        # state_dict = torch.load(args.model)
-        # for k in list(state_dict.keys()):
-        #     if re.search(r'in\d+\.running_(mean|var)$', k):
-        #         del state_dict[k]
         state_dict=read_state_dict(args.model)
         model.load_state_dict(state_dict)
         model.to(device)
@@ -193,5 +195,6 @@ if __name__=='__main__':
                     device = device,
                     cycle_length = cycle,
                     half_precision = half_precision,
-                    rotate = rotate)
+                    rotate = rotate,
+                    camera = args.camera)
 
