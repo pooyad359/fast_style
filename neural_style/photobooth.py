@@ -26,9 +26,17 @@ parser.add_argument('--view-time','-vt', default = 10, type = float,
 parser.add_argument('--rotate',default = 0, type = int, 
                     help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
 def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0):
-    vs = VideoStream(src=0).start()
+    
+    # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
+    try:
+        from jetcam.csi_camera import CSICamera
+        vs = CSICamera()
+        print('Using CSI camera')
+    except:
+        vs = VideoStream(src=0).start()
     print('Warming up')
     time.sleep(2.0)
+
     print('Program started')
     model = TransformerNet()
     cv2.namedWindow("Output", cv2.WND_PROP_FULLSCREEN)
