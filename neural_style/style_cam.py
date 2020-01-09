@@ -69,41 +69,12 @@ def style_frame(img,style_model,device=device,half_precision=False):
     return output[0]
 
 
-
-def style_cam(style_model,width=320,half_precision=False, rotate = 0):
-    print("[INFO] starting video stream...")
-    vs = VideoStream(src=0).start()
-    time.sleep(2.0)
-    timer=Timer()
-    while(True):
-        frame=vs.read()
-        if frame is None:
-            frame=np.random.randint(0,255,(480,640,3),dtype=np.uint8)
-        frame=cv2.flip(frame, 1)
-        frame = resize(frame, width=width)
-
-        # Style the frame
-        img=style_frame(frame,style_model,device,half_precision).numpy()
-        img=np.clip(img,0,255)
-        img=img.astype(np.uint8)
-        
-        img = img.transpose(1, 2, 0)
-        img=cv2.resize(img[:,:,::-1],(640,480))
-        # rotate
-        if rotate>0:
-            img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
-        elif rotate<0:
-            img = cv2.rotate(img,cv2.ROTATE_90_COUNTERCLOCKWISE)
-            
-        # print(img.shape)
-        cv2.imshow("Output", img)
-        timer()
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord("q"):
-            break
-
 def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False, rotate = 0, camera = 0):
-    model_iter=itertools.cycle(os.listdir(path))
+    if path.is_file():
+        model_iter = itertools.cycle([os.path.basename(path)])
+        path = os.path.dirname(path)
+    else:
+        model_iter=itertools.cycle(os.listdir(path))
     model_file=next(model_iter)
     print(f'Using {model_file} ')
     model_path=os.path.join(path,model_file)
@@ -188,22 +159,12 @@ if __name__=='__main__':
     cv2.moveWindow('Output',x=args.xwin,y=args.ywin)
     if args.full_screen:
         cv2.setWindowProperty("Output",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
-    if path.is_file():
-        # load model
-        model = TransformerNet()
-        state_dict=read_state_dict(args.model)
-        model.load_state_dict(state_dict)
-        model.to(device)
-        style_cam(style_model = model,
-                    width = width,
-                    half_precision = half_precision,
-                    rotate = rotate)
-    else:
-        multi_style( path = path,
-                    width = width,
-                    device = device,
-                    cycle_length = cycle,
-                    half_precision = half_precision,
-                    rotate = rotate,
-                    camera = args.camera)
+
+    multi_style( path = path,
+                width = width,
+                device = device,
+                cycle_length = cycle,
+                half_precision = half_precision,
+                rotate = rotate,
+                camera = args.camera)
 
