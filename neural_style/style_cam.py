@@ -34,6 +34,7 @@ parser.add_argument('--xwin', '-x', default= 0, type = int,
                     help = 'x coordinate for location of window (pixels from left)')
 parser.add_argument('--ywin', '-y' ,default= 0, type = int, 
                     help = 'y coordinate for location of window (pixels from top)')
+
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -111,7 +112,15 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
     model.to(device)
     if half_precision:
         model.half()
-    vs = VideoStream(src=camera).start()
+    
+    # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
+    try:
+        from jetcam.csi_camera import CSICamera
+        vs = CSICamera()
+        print('Using CSI camera')
+    except:
+        vs = VideoStream(src=camera).start()
+
     time.sleep(2.0)
     timer=Timer()
     cycle_begin = time.time()
@@ -128,7 +137,7 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         img=img.astype(np.uint8)
         
         img = img.transpose(1, 2, 0)
-        img=cv2.resize(img[:,:,::-1],(640,480))
+        img=img[:,:,::-1]
 
         # rotate
         if rotate>0:
