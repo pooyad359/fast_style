@@ -9,7 +9,7 @@ from imutils.video import VideoStream
 from imutils import resize
 import time
 import os
-import pdb
+from gstreamer import gstreamer_pipeline
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--model','-m', default='./models', help='Path to style model.')
@@ -29,8 +29,9 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
     try:
-        from jetcam.csi_camera import CSICamera
-        vs = CSICamera()
+        vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        time.sleep(2.0)
+        vs.read()
         print('Using CSI camera')
     except:
         vs = VideoStream(src=0).start()
@@ -44,6 +45,8 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
     while True:
         preparation(vs,prep_time,rotate)
         img = vs.read()
+        if type(img) == type(()):
+            img=img[1]
         img = cv2.flip(img, 1)
         img = resize(img,width)
 
@@ -81,6 +84,8 @@ def preparation(streamer, length = 10, rotate = 0):
     while (time.time()-start)<length:
         x = (time.time()-start)/length
         frame = streamer.read()
+        if type(frame)==type(()):
+            frame=frame[1]
         frame = cv2.flip(frame, 1)
         frame_show = countdown_style(frame,x)
         # rotate

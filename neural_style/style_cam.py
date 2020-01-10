@@ -12,6 +12,7 @@ from imutils import resize
 import numpy as np
 import os
 import itertools
+from gstreamer import gstreamer_pipeline
 
 device=torch.device('cpu')
 parser=argparse.ArgumentParser()
@@ -86,22 +87,40 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
     try:
-        from jetcam.csi_camera import CSICamera
-        vs = CSICamera()
+        #from jetcam.csi_camera import CSICamera
+        #vs = CSICamera(width=width, height=int(width/1.5), capture_width=1080, capture_height=720, capture_fps=15)
+        #vs.read()
+        vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        time.sleep(2.0)
+        vs.read()
         print('Using CSI camera')
+        
     except:
+        print('Using USB camera')
         vs = VideoStream(src=camera).start()
-
-    time.sleep(2.0)
+        time.sleep(2.0)
+    
+#    for _ in range(3):
+#        t0 = time.time()
+#        frame=np.random.randint(0,255,(int(width/1.5),width,3),dtype=np.uint8)
+#        style_frame(frame,model,device,half_precision)
+#        t1 = time.time()
+#           print(f'warmup: {t1-t0:.5f}')
+    
     timer=Timer()
     cycle_begin = time.time()
-    while(True):
+    try_this=True
+    while(True):   
         frame=vs.read()
+        #print(frame)
         if frame is None:
             frame=np.random.randint(0,255,(int(width/1.5),width,3),dtype=np.uint8)
+        #print(frame.shape)
+        if type(frame) is type(()):
+            frame=frame[1]
+        
         frame=cv2.flip(frame, 1)
         frame = resize(frame, width=width)
-
         # Style the frame
         img=style_frame(frame,model,device,half_precision).numpy()
         img=np.clip(img,0,255)
@@ -109,7 +128,6 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         
         img = img.transpose(1, 2, 0)
         img=img[:,:,::-1]
-
         # rotate
         if rotate>0:
             img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
