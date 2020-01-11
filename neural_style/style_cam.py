@@ -92,7 +92,8 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         #vs.read()
         vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
         time.sleep(2.0)
-        vs.read()
+        img = vs.read()
+        assert img[1] is not None
         print('Using CSI camera')
         
     except:

@@ -31,7 +31,8 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
     try:
         vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
         time.sleep(2.0)
-        vs.read()
+        img = vs.read()
+        assert img[1] is not None
         print('Using CSI camera')
     except:
         vs = VideoStream(src=0).start()
