@@ -10,6 +10,7 @@ from imutils import resize
 import time
 import os
 from gstreamer import gstreamer_pipeline
+from concurrent import futures
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--model','-m', default='./models', help='Path to style model.')
@@ -68,7 +69,10 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         # Inference
         cv2.imshow('Output',img)
         key = cv2.waitKey(1) & 0xFF
-        output = style_frame(img,model,device).numpy()
+        busy = BusyShow(img, style_frame, **{'img': img,'style_model': model,'device': device})
+        output = busy.execute()
+        output = output.numpy()
+        # output = style_frame(img,model,device).numpy()
 
         # Postprocessing
         output = post_process(output)
@@ -96,7 +100,6 @@ def preparation(streamer, length = 10, rotate = 0):
             frame_show = cv2.rotate(frame_show,cv2.ROTATE_90_COUNTERCLOCKWISE)
         cv2.imshow('Output', frame_show)
         key = cv2.waitKey(1) & 0xFF
-            # time.sleep(.1)
         if key == ord("q"):
             quit()
 
@@ -127,7 +130,43 @@ def post_process(image):
     img=img.astype(np.uint8)
     img = img.transpose(1, 2, 0)
     return img[:,:,::-1]
+
+
+class BusyShow():
+    def __init__(self,image,func,**kwargs):
+        self.func = func
+        self.kwargs = kwargs
+        self.image = image
     
+    def busy_frame(self,t):
+        img = self.image
+        h,w,_ = img.shape
+        xc , yc = w//2 , h//2
+        rc = h//6
+        ri = rc//4
+        f = 2
+        n = 6
+        out = img.copy()
+        for i in range(n):
+            c = int(i/n*200)
+            color = (100, 0,c)
+            xi = int(xc + rc*np.cos(f*t+ i*2*np.pi/n))
+            yi = int(yc + rc*np.sin(f*t+ i*2*np.pi/n))
+            out = cv2.circle(out, (xi,yi), ri, color, -1)
+        return out
+    
+    def execute(self,window_name = 'Output'):
+        t0 = 0
+        with futures.ThreadPoolExecutor() as executor:
+            f = executor.submit(self.func,**self.kwargs)
+            while f.running():
+                t = time.perf_counter()-t0
+                temp_img = self.busy_frame(t)
+                cv2.imshow(window_name, temp_img)
+                key = cv2.waitKey(1) & 0xFF
+                time.sleep(0.05)
+        return f.result()
+
 
 if __name__=='__main__':
     args=parser.parse_args()
