@@ -30,14 +30,20 @@ parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of USB ca
 def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0):
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
+    height = int(width*.75)
     if camera<0:
-        vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        print('Using CSI camera')
+        vs = cv2.VideoCapture(gstreamer_pipeline(capture_width=width,
+                                                capture_height=height,
+                                                display_width=width ,
+                                                display_height=height), cv2.CAP_GSTREAMER)
         time.sleep(2.0)
         img = vs.read()
         assert img[1] is not None
-        print('Using CSI camera')
+        
     else:
-        vs = VideoStream(src=camera).start()
+        print('Using USB camera')
+        vs = VideoStream(src=camera,resolution=(width,height)).start()
     print('Warming up')
     time.sleep(2.0)
 

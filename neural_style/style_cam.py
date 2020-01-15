@@ -86,19 +86,23 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         model.half()
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
+    height = int(width*.75)
     if camera<0:
         #from jetcam.csi_camera import CSICamera
         #vs = CSICamera(width=width, height=int(width/1.5), capture_width=1080, capture_height=720, capture_fps=15)
         #vs.read()
-        vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
+        print('Using CSI camera')
+        vs = cv2.VideoCapture(gstreamer_pipeline(capture_width=width,
+                                                capture_height=height,
+                                                display_width=width ,
+                                                display_height=height), cv2.CAP_GSTREAMER)
         time.sleep(2.0)
         img = vs.read()
         assert img[1] is not None
-        print('Using CSI camera')
         
     else:
         print('Using USB camera')
-        vs = VideoStream(src=camera).start()
+        vs = VideoStream(src=camera,resolution=(width,height)).start()
         time.sleep(2.0)
     
     timer=Timer()
