@@ -26,17 +26,18 @@ parser.add_argument('--view-time','-vt', default = 10, type = float,
                     help = 'Time (in seconds) the result will be viewed.')
 parser.add_argument('--rotate',default = 0, type = int, 
                     help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
-def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0):
+parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of USB camera. "-1" to use CSI camera.')
+def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0):
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
-    try:
+    if camera<0:
         vs = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
         time.sleep(2.0)
         img = vs.read()
         assert img[1] is not None
         print('Using CSI camera')
-    except:
-        vs = VideoStream(src=0).start()
+    else:
+        vs = VideoStream(src=camera).start()
     print('Warming up')
     time.sleep(2.0)
 
@@ -175,6 +176,7 @@ if __name__=='__main__':
     prep_time = args.prep_time
     view_time = args.view_time
     rotate = args.rotate
+    camera = args.camera
     if args.gpu and torch.cuda.is_available():
         device = torch.device('cuda')
     else:
@@ -184,4 +186,4 @@ if __name__=='__main__':
     else:
         models = [os.path.basename(models_path)]
         models_path = os.path.dirname(models_path)
-    photo_booth(models_path, models, width, device,prep_time,view_time,rotate)
+    photo_booth(models_path, models, width, device,prep_time,view_time,rotate,camera)

@@ -30,7 +30,7 @@ parser.add_argument('--half', '-hp', default=0,type=int,
                     help = 'Half precision. If "0" uses float32, if "1" uses float16.')
 parser.add_argument('--rotate', '-r' , default = 0, type = int, 
                     help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
-parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of camera.')
+parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of USB camera. "-1" to use CSI camera.')
 parser.add_argument('--xwin', '-x', default= 0, type = int, 
                     help = 'x coordinate for location of window (pixels from left)')
 parser.add_argument('--ywin', '-y' ,default= 0, type = int, 
@@ -86,7 +86,7 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         model.half()
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
-    try:
+    if camera<0:
         #from jetcam.csi_camera import CSICamera
         #vs = CSICamera(width=width, height=int(width/1.5), capture_width=1080, capture_height=720, capture_fps=15)
         #vs.read()
@@ -96,27 +96,19 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         assert img[1] is not None
         print('Using CSI camera')
         
-    except:
+    else:
         print('Using USB camera')
         vs = VideoStream(src=camera).start()
         time.sleep(2.0)
     
-#    for _ in range(3):
-#        t0 = time.time()
-#        frame=np.random.randint(0,255,(int(width/1.5),width,3),dtype=np.uint8)
-#        style_frame(frame,model,device,half_precision)
-#        t1 = time.time()
-#           print(f'warmup: {t1-t0:.5f}')
-    
     timer=Timer()
     cycle_begin = time.time()
-    try_this=True
     while(True):   
         frame=vs.read()
-        #print(frame)
+
         if frame is None:
             frame=np.random.randint(0,255,(int(width/1.5),width,3),dtype=np.uint8)
-        #print(frame.shape)
+
         if type(frame) is type(()):
             frame=frame[1]
         
