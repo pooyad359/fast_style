@@ -27,7 +27,9 @@ parser.add_argument('--view-time','-vt', default = 10, type = float,
 parser.add_argument('--rotate',default = 0, type = int, 
                     help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
 parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of USB camera. "-1" to use CSI camera.')
-def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0):
+parser.add_argument('--save', '-s', default = None, type = str, 
+                    help = 'path to where the snapshots will be saved. Default is None which means no snapshot will be saved.')
+def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0,output_path = None):
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
     height = int(width*.75)
@@ -72,7 +74,12 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         state_dict = read_state_dict(model_path)
         model.load_state_dict(state_dict)
         model.to(device)
-
+        if output_path is not None:
+            if not os.path.exists(output_path):
+                os.mkdir(output_path)
+            filename = time.strftime('%Y_%m_%d_%H_%M_%S') + os.path.splitext(model_name)[0] + '.jpg'
+            filepath = os.path.join(output_path,filename)
+            cv2.imwrite(filepath,img)
         # Inference
         cv2.imshow('Output',img)
         key = cv2.waitKey(1) & 0xFF
@@ -183,6 +190,7 @@ if __name__=='__main__':
     view_time = args.view_time
     rotate = args.rotate
     camera = args.camera
+    path_out = args.save
     if args.gpu and torch.cuda.is_available():
         device = torch.device('cuda')
     else:
@@ -192,4 +200,4 @@ if __name__=='__main__':
     else:
         models = [os.path.basename(models_path)]
         models_path = os.path.dirname(models_path)
-    photo_booth(models_path, models, width, device,prep_time,view_time,rotate,camera)
+    photo_booth(models_path, models, width, device,prep_time,view_time,rotate,camera,path_out)
