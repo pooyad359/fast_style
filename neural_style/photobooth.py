@@ -24,13 +24,14 @@ parser.add_argument('--prep-time','-pt', default = 10, type = float,
                     help = 'Time (in seconds) before taking a photo (count-down time).')
 parser.add_argument('--view-time','-vt', default = 10, type = float,
                     help = 'Time (in seconds) the result will be viewed.')
-parser.add_argument('--rotate',default = 0, type = int, 
+parser.add_argument('--rotate','-r',default = 0, type = int, 
                     help = 'if "1" will rotate the image 90 degrees CW, if "-1" will rotate the image 90 degrees CCW')
 parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of USB camera. "-1" to use CSI camera.')
 parser.add_argument('--save', '-s', default = None, type = str, 
                     help = 'path to where the snapshots will be saved. Default is None which means no snapshot will be saved.')
 def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0,output_path = None):
-    
+    if rotate!=0:
+        width = int(width/.75)
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
     height = int(width*.75)
     if camera<0:
@@ -48,6 +49,8 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         vs = VideoStream(src=camera,resolution=(width,height)).start()
     print('Warming up')
     time.sleep(2.0)
+    if rotate!=0:
+        width = int(width*.75)
 
     print('Program started')
     model = TransformerNet()
@@ -62,11 +65,11 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         img = resize(img,width)
 
         # rotate
-        if rotate>0:
-            img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
-        elif rotate<0:
-            img = cv2.rotate(img,cv2.ROTATE_90_COUNTERCLOCKWISE)
-        
+        if rotate!=0:
+            h,w,_ = img.shape
+            margin = (w-h)//2
+            img = img[:,margin:-margin,:]
+
         # Choosing and loading the model
         model_name = np.random.choice(models)
         print('Using {}'.format(model_name))
@@ -77,7 +80,7 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         if output_path is not None:
             if not os.path.exists(output_path):
                 os.mkdir(output_path)
-            filename = time.strftime('%Y_%m_%d_%H_%M_%S') + os.path.splitext(model_name)[0] + '.jpg'
+            filename = time.strftime('%Y_%m_%d_%H_%M_%S_') + os.path.splitext(model_name)[0] + '.jpg'
             filepath = os.path.join(output_path,filename)
             cv2.imwrite(filepath,img)
         # Inference
@@ -87,7 +90,7 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         output = busy.execute()
         output = output.numpy()
         # output = style_frame(img,model,device).numpy()
-
+        
         # Postprocessing
         output = post_process(output)
         cv2.imshow('Output',output)
@@ -100,18 +103,22 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
 
 def preparation(streamer, length = 10, rotate = 0):
     start = time.time()
+    
     while (time.time()-start)<length:
         x = (time.time()-start)/length
         frame = streamer.read()
         if type(frame)==type(()):
             frame=frame[1]
+        # rotate
+        
+        if rotate!=0:
+            h,w,_ = frame.shape
+            margin = (w-h)//2
+            frame = frame[:,margin:-margin,:]
+
+        
         frame = cv2.flip(frame, 1)
         frame_show = countdown_style(frame,x)
-        # rotate
-        if rotate>0:
-            frame_show = cv2.rotate(frame_show,cv2.ROTATE_90_CLOCKWISE)
-        elif rotate<0:
-            frame_show = cv2.rotate(frame_show,cv2.ROTATE_90_COUNTERCLOCKWISE)
         cv2.imshow('Output', frame_show)
         key = cv2.waitKey(1) & 0xFF
         if key == ord("q"):

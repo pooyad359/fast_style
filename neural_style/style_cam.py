@@ -86,6 +86,9 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         model.half()
     
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
+    if rotate!=0:
+        width = int(width/.75)
+
     height = int(width*.75)
     if camera<0:
         #from jetcam.csi_camera import CSICamera
@@ -104,12 +107,13 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         print('Using USB camera')
         vs = VideoStream(src=camera,resolution=(width,height)).start()
         time.sleep(2.0)
-    
+    if rotate!=0:
+        width = int(width*.75)
+
     timer=Timer()
     cycle_begin = time.time()
     while(True):   
         frame=vs.read()
-
         if frame is None:
             frame=np.random.randint(0,255,(int(width/1.5),width,3),dtype=np.uint8)
 
@@ -126,10 +130,10 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         img = img.transpose(1, 2, 0)
         img=img[:,:,::-1]
         # rotate
-        if rotate>0:
-            img = cv2.rotate(img,cv2.ROTATE_90_CLOCKWISE)
-        elif rotate<0:
-            img = cv2.rotate(img,cv2.ROTATE_90_COUNTERCLOCKWISE)
+        if rotate!=0:
+            h,w,_ = img.shape
+            margin = (w-h)//2
+            img = img[:,margin:-margin,:]
         # print(img.shape)
         cv2.imshow("Output", img)
         timer()
