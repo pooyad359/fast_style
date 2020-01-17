@@ -29,7 +29,9 @@ parser.add_argument('--rotate','-r',default = 0, type = int,
 parser.add_argument('--camera', '-c', default=0,type=int,help = 'Index of USB camera. "-1" to use CSI camera.')
 parser.add_argument('--save', '-s', default = None, type = str, 
                     help = 'path to where the snapshots will be saved. Default is None which means no snapshot will be saved.')
-def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0,output_path = None):
+parser.add_argument('--cut-off','-co',default=0,type=float,
+                    help='portion of width to cut off. Positive values will be cut from width and negative from height.')
+def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_time = 10, view_time = 10,rotate = 0,camera = 0,output_path = None,cutoff=0):
     if rotate!=0:
         width = int(width/.75)
     # attempts to load jetcam for Jetson Nano, if fails uses normal camera.
@@ -57,7 +59,7 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
     cv2.namedWindow("Output", cv2.WND_PROP_FULLSCREEN)
     cv2.setWindowProperty("Output",cv2.WND_PROP_FULLSCREEN,cv2.WINDOW_FULLSCREEN)
     while True:
-        preparation(vs,prep_time,rotate)
+        preparation(vs,prep_time,rotate,cutoff)
         img = vs.read()
         if type(img) == type(()):
             img=img[1]
@@ -67,9 +69,15 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         # rotate
         if rotate!=0:
             h,w,_ = img.shape
-            margin = (w-h)//2
+            margin = int(w-h*h/w)//2
             img = img[:,margin:-margin,:]
-
+        if cutoff>0:
+            margin=int(cutoff*img.shape[1])//2
+            img = img[:,margin:-margin,:]
+        elif cutoff<0:
+            margin=int(-cutoff*img.shape[0])//2
+            img = img[margin:-margin,:,:]
+        
         # Choosing and loading the model
         model_name = np.random.choice(models)
         print('Using {}'.format(model_name))
@@ -101,7 +109,7 @@ def photo_booth(path, models, width = 1080, device = torch.device('cpu'),prep_ti
         view_result(img, view_time)
                 
 
-def preparation(streamer, length = 10, rotate = 0):
+def preparation(streamer, length = 10, rotate = 0,cutoff=0):
     start = time.time()
     
     while (time.time()-start)<length:
@@ -113,10 +121,15 @@ def preparation(streamer, length = 10, rotate = 0):
         
         if rotate!=0:
             h,w,_ = frame.shape
-            margin = (w-h)//2
+            margin = int(w-h*h/w)//2
             frame = frame[:,margin:-margin,:]
+        if cutoff>0:
+            margin=int(cutoff*frame.shape[1])//2
+            frame = frame[:,margin:-margin,:]
+        elif cutoff<0:
+            margin=int(-cutoff*frame.shape[0])//2
+            frame = frame[margin:-margin,:,:]
 
-        
         frame = cv2.flip(frame, 1)
         frame_show = countdown_style(frame,x)
         cv2.imshow('Output', frame_show)
@@ -198,6 +211,7 @@ if __name__=='__main__':
     rotate = args.rotate
     camera = args.camera
     path_out = args.save
+    cutoff=args.cut_off
     if args.gpu and torch.cuda.is_available():
         device = torch.device('cuda')
     else:
@@ -207,4 +221,4 @@ if __name__=='__main__':
     else:
         models = [os.path.basename(models_path)]
         models_path = os.path.dirname(models_path)
-    photo_booth(models_path, models, width, device,prep_time,view_time,rotate,camera,path_out)
+    photo_booth(models_path, models, width, device,prep_time,view_time,rotate,camera,path_out,cutoff)

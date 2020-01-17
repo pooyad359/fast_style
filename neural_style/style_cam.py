@@ -35,7 +35,8 @@ parser.add_argument('--xwin', '-x', default= 0, type = int,
                     help = 'x coordinate for location of window (pixels from left)')
 parser.add_argument('--ywin', '-y' ,default= 0, type = int, 
                     help = 'y coordinate for location of window (pixels from top)')
-
+parser.add_argument('--cut-off', '-co' ,default= 0, type = float, 
+                    help = 'portion of width to cut off. Positive values will be cut from width and negative from height.')
 class Timer():
     def __init__(self):
         self.end = time.time()
@@ -70,7 +71,7 @@ def style_frame(img,style_model,device=device,half_precision=False):
     return output[0]
 
 
-def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False, rotate = 0, camera = 0):
+def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precision=False, rotate = 0, camera = 0,cutoff=0):
     if path.is_file():
         model_iter = itertools.cycle([os.path.basename(path)])
         path = os.path.dirname(path)
@@ -132,8 +133,16 @@ def multi_style(path,width=320,device=device,cycle_length = np.inf,half_precisio
         # rotate
         if rotate!=0:
             h,w,_ = img.shape
-            margin = (w-h)//2
+            margin = int(w-h*h/w)//2
             img = img[:,margin:-margin,:]
+            
+        
+        if cutoff>0:
+            margin=int(cutoff*img.shape[1])//2
+            img = img[:,margin:-margin,:]
+        elif cutoff<0:
+            margin=int(-cutoff*img.shape[0])//2
+            img = img[margin:-margin,:,:]
         # print(img.shape)
         cv2.imshow("Output", img)
         timer()
@@ -166,6 +175,7 @@ if __name__=='__main__':
     half_precision = (args.half==1)
     cycle = args.time
     rotate = args.rotate
+    cutoff=args.cut_off
     if cycle is None:
         cycle = np.inf
     if gpu!=0 and torch.cuda.is_available():
@@ -185,5 +195,5 @@ if __name__=='__main__':
                 cycle_length = cycle,
                 half_precision = half_precision,
                 rotate = rotate,
-                camera = args.camera)
+                camera = args.camera,cutoff=cutoff)
 
